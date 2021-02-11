@@ -1,0 +1,220 @@
+﻿<Controls:MetroWindow x:Class="MemoryFilter.MainWindow"
+                      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                      xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+                      xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+                      xmlns:local="clr-namespace:MemoryFilter"
+                      xmlns:converters="clr-namespace:MemoryFilter.Converters"
+                      xmlns:viewModel="clr-namespace:MemoryFilter.ViewModel"
+                      xmlns:domain="clr-namespace:MemoryFilter.Domain"
+                      xmlns:Controls="clr-namespace:MahApps.Metro.Controls;assembly=MahApps.Metro"
+                      xmlns:settings="clr-namespace:MemoryFilter.Settings"
+                      xmlns:controls="clr-namespace:MemoryFilter.Controls"
+                      mc:Ignorable="d"
+                      d:DataContext="{d:DesignInstance viewModel:MainViewModel}"
+                      Title="MainWindow" Height="350" Width="900" WindowStartupLocation="CenterScreen"
+                      WindowState="Maximized">
+    <Window.Resources>
+        <Style TargetType="{x:Type controls:ProgressNotifierControl}" x:Key="ProgressNotifier">
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate>
+                        <Grid>
+                            <Grid
+                                Visibility="{Binding Path=Progress.IsCancelled, RelativeSource={RelativeSource AncestorType={x:Type controls:ProgressNotifierControl}}, 
+                                                Converter={x:Static converters:TrueToCollapsedConverter.Instance}}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="100px" />
+                                </Grid.ColumnDefinitions>
+                                <Grid Grid.Column="0">
+                                    <TextBlock Text="{Binding Path=Collection.ProgressNotifier.CurrentAction}"
+                                               HorizontalAlignment="Left" Margin="5,0,0,5" />
+
+                                    <ProgressBar Minimum="0" Maximum="1"
+                                                 Value="{Binding Path=Collection.ProgressNotifier.Progress, Mode=OneWay, FallbackValue=0, TargetNullValue=0}"
+                                                 Height="25" />
+                                    <TextBlock HorizontalAlignment="Center" VerticalAlignment="Center"
+                                               Text="{Binding Collection.ProgressNotifier.Progress, FallbackValue=0, TargetNullValue=0, Converter={x:Static converters:ProgressToStringConverter.Instance}}"
+                                               Margin="0,0,0,5" />
+                                </Grid>
+                                <Button Grid.Column="1"
+                                        Command="{Binding Path=Collection.ProgressNotifier.CancelCommand}">
+                                    Cancel
+                                </Button>
+                            </Grid>
+
+                            <ContentPresenter
+                                Visibility="{Binding Path=Progress.IsCancelled, RelativeSource={RelativeSource AncestorType={x:Type controls:ProgressNotifierControl}}, Converter={x:Static converters:TrueToVisibleConverter.Instance}}"
+                                Content="{Binding RelativeSource={RelativeSource AncestorType={x:Type controls:ProgressNotifierControl}}, Path=Content}" />
+                        </Grid>
+
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
+    <Grid Margin="5" Name="root">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="450" />
+            <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
+
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+
+            <controls:ProgressNotifierControl Progress="{Binding Path=Collection.ProgressNotifier}"
+                                              Style="{StaticResource ProgressNotifier}">
+                <Grid
+                    Visibility="{Binding Path=Collection.ProgressNotifier.IsCancelled, Converter={x:Static converters:TrueToVisibleConverter.Instance}}">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="100px" />
+                    </Grid.ColumnDefinitions>
+                    <ComboBox
+                        Text="{Binding Path=Collection.SourceDirectory, UpdateSourceTrigger=PropertyChanged, Mode=TwoWay}"
+                        Margin="0,0,5,0"
+                        IsEditable="True" ItemsSource="{Binding Path=Configuration.HistorySourcePaths}" />
+                    <Button Content="Browse" Grid.Column="1" Command="{Binding Path=BrowseSourceCommand}" />
+                </Grid>
+            </controls:ProgressNotifierControl>
+
+            <TextBlock Grid.Row="2" Text="Folder format" Margin="0,5,0,0" />
+            <ComboBox Grid.Row="3"
+                      Text="{Binding Path=Configuration.PathFormat, UpdateSourceTrigger=PropertyChanged, Mode=TwoWay}"
+                      Margin="0,3,0,0"
+                      IsEditable="True" ItemsSource="{Binding Path=Configuration.HistoryPathFormats}" />
+
+
+            <DockPanel Grid.Row="4" Grid.Column="0" LastChildFill="True" Margin="0,5,0,0">
+                <Grid DockPanel.Dock="Top" Margin="0,0,0,5">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="5" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <Button Content="Select All" Command="{Binding Path=SelectAllCommand}" />
+                    <Button Grid.Column="2" Content="Select None" Command="{Binding Path=SelectNoneCommand}" />
+                </Grid>
+
+                <local:ExtendedTreeView VerticalAlignment="Stretch"
+                                        HorizontalAlignment="Stretch"
+                                        Current="{Binding Path=Current, Mode=OneWayToSource}"
+
+                                        ItemsSource="{Binding Path=Collection.Items}">
+                    <TreeView.ItemContainerStyle>
+                        <Style TargetType="{x:Type TreeViewItem}">
+                            <Setter Property="IsExpanded" Value="{Binding Path=IsExpanded, Mode=TwoWay}" />
+                        </Style>
+                    </TreeView.ItemContainerStyle>
+                    <ItemsControl.Resources>
+                        <HierarchicalDataTemplate DataType="{x:Type domain:MediaDirectory}"
+
+                                                  ItemsSource="{Binding Path=Items}">
+                            <StackPanel Orientation="Horizontal" Height="22">
+                                <CheckBox
+                                    IsChecked="{Binding Path=IsEnabled, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                    IsThreeState="True" VerticalAlignment="Center" VerticalContentAlignment="Center" />
+                                <TextBlock VerticalAlignment="Center" Text="{Binding Path=Title}">
+                                    <TextBlock.ToolTip>
+                                        <TextBlock FontSize="14" Text="{Binding Path=Description}" />
+                                    </TextBlock.ToolTip>
+                                </TextBlock>
+                            </StackPanel>
+                        </HierarchicalDataTemplate>
+                        <DataTemplate DataType="{x:Type domain:MediaFile}">
+                            <StackPanel Orientation="Horizontal" Height="22">
+                                <CheckBox
+                                    IsChecked="{Binding Path=IsEnabled, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                    IsThreeState="True" VerticalAlignment="Center" VerticalContentAlignment="Center" />
+                                <TextBlock VerticalAlignment="Center" Text="{Binding Path=Title}"
+                                           ToolTip="{Binding Path=Description}">
+                                    <TextBlock.ContextMenu>
+                                        <ContextMenu>
+                                            <MenuItem Header="Open File" Command="{Binding OpenFileCommand}" />
+                                            <MenuItem Header="Show in Explorer"
+                                                      Command="{Binding ShowInExplorerCommand}" />
+                                        </ContextMenu>
+                                    </TextBlock.ContextMenu>
+                                </TextBlock>
+                            </StackPanel>
+                        </DataTemplate>
+                    </ItemsControl.Resources>
+                </local:ExtendedTreeView>
+            </DockPanel>
+
+        </Grid>
+        <Grid Grid.Row="0" Grid.Column="1" Margin="5,0,0,0">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+            <controls:ProgressNotifierControl Progress="{Binding Path=FilterProgress}"
+                                              Style="{StaticResource ProgressNotifier}">
+                <DockPanel LastChildFill="True" Margin="0,0,0,5">
+                    <Button Content="Execute" Margin="5,0,0,0" DockPanel.Dock="Right"
+                            Command="{Binding Path=ExecuteCommand}" />
+                    <Button Content="Browse" Command="{Binding Path=BrowseTargetCommand}" DockPanel.Dock="Right" />
+                    <ComboBox Text="{Binding Path=TargetDirectory, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                              IsEditable="True"
+                              ItemsSource="{Binding Path=Configuration.HistoryTargetPaths}" />
+                </DockPanel>
+            </controls:ProgressNotifierControl>
+
+
+            <StackPanel Grid.Row="5" Orientation="Vertical">
+                <TextBlock Text="Override strategy" />
+                <Grid>
+                    <StackPanel>
+                        <RadioButton Margin="0,5,0,0"
+                                     IsChecked="{Binding Path=Configuration.OverrideStrategy, Converter={x:Static converters:EnumBooleanConverter.Instance}, ConverterParameter={x:Static settings:OverrideStrategy.Skip}}">
+                            Do not copy/move source file
+                        </RadioButton>
+                        <RadioButton Margin="0,5,0,0"
+                                     IsChecked="{Binding Path=Configuration.OverrideStrategy, Converter={x:Static converters:EnumBooleanConverter.Instance}, ConverterParameter={x:Static settings:OverrideStrategy.RemoveSourceFile}}">
+                            Source file will be removed
+                        </RadioButton>
+                        <RadioButton Margin="0,5,0,0"
+                                     IsChecked="{Binding Path=Configuration.OverrideStrategy, Converter={x:Static converters:EnumBooleanConverter.Instance}, ConverterParameter={x:Static settings:OverrideStrategy.OverrideTarget}}">
+                            Target file is removed and replaced with a file from source directory
+                        </RadioButton>
+                        <RadioButton Margin="0,5,0,0"
+                                     IsChecked="{Binding Path=Configuration.OverrideStrategy, Converter={x:Static converters:EnumBooleanConverter.Instance}, ConverterParameter={x:Static settings:OverrideStrategy.GiveAnewNameToSourceFile}}">
+                            Add a suffix to a source file, e.g. img567_443
+                        </RadioButton>
+                    </StackPanel>
+                </Grid>
+                
+                <ItemsControl ItemsSource="{Binding FilterProgress.Logs}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <TextBlock Text="{Binding Path=Message}" ToolTip="{Binding Path=FilePath}">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding Path=LogLevel}" Value="true"> 
+                                                <Setter Property="Foreground" 
+                                                        Value="Yellow" /> 
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </StackPanel>
+        </Grid>
+    </Grid>
+</Controls:MetroWindow>
